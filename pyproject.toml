@@ -1,7 +1,14 @@
 [project]
 name = "py-project-storage-helper"
-version = "0.1.0"
-description = "Add your description here"
+version = "1.0.0"
+description = "A python app to manage your code project folders and safe valuable disk space."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pywebview>=6.2.1",
+    "send2trash>=2.1.0",
+]
+
+[project.scripts]
+py-project-storage-helper = "main:main"
+
