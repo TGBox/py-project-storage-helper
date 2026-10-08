@@ -20,30 +20,33 @@ class StorageHelperApi:
     """Methods exposed to JavaScript via pywebview.api."""
 
     def __init__(self) -> None:
-        self.window: Optional[webview.Window] = None
+        # Underscore matters: pywebview walks every public attribute of the js_api object to
+        # expose it to JavaScript. A public reference to the window makes it crawl the native
+        # WinForms/.NET objects behind it, and the app freezes on start.
+        self._window: Optional[webview.Window] = None
         self._stop_scan_flag = threading.Event()
         # Only folders reported by the latest scan may be deleted
         self._scanned_paths: set[str] = set()
         self._delete_thread: Optional[threading.Thread] = None
 
     def set_window(self, window: webview.Window) -> None:
-        self.window = window
+        self._window = window
 
     def _eval_js(self, fn_name: str, payload: Any) -> None:
         """Safely invoke a JavaScript callback on the frontend."""
-        if not self.window:
+        if not self._window:
             return
         try:
-            self.window.evaluate_js(f"window.{fn_name}({json.dumps(payload, ensure_ascii=False)});")
+            self._window.evaluate_js(f"window.{fn_name}({json.dumps(payload, ensure_ascii=False)});")
         except Exception as exc:
             print(f"[StorageHelperApi] JS eval error: {exc}")
 
     def select_folder(self) -> str:
         """Open native folder picker and return chosen path."""
-        if not self.window:
+        if not self._window:
             return ""
         try:
-            result = self.window.create_file_dialog(webview.FileDialog.FOLDER)
+            result = self._window.create_file_dialog(webview.FileDialog.FOLDER)
             return str(result[0]) if result else ""
         except Exception as exc:
             print(f"[StorageHelperApi] Folder picker error: {exc}")

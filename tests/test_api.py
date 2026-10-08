@@ -66,6 +66,16 @@ class ApiTest(unittest.TestCase):
         return self.window.payloads("onScanCompleted")[-1]
 
 
+class TestExposure(unittest.TestCase):
+    def test_only_methods_are_public(self):
+        # pywebview exposes every public attribute of the js_api object to JavaScript and walks
+        # into non-callables. Public data (e.g. the window) makes the app hang on start.
+        api = StorageHelperApi()
+        api.set_window(FakeWindow())
+        public_data = [n for n in dir(api) if not n.startswith("_") and not callable(getattr(api, n))]
+        self.assertEqual(public_data, [])
+
+
 class TestScan(ApiTest):
     def test_missing_folder_is_reported(self):
         res = self.api.start_scan(str(self.root / "missing"))
