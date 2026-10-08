@@ -1168,10 +1168,13 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
-   WIDESCREEN 2-COLUMN SPLIT LAYOUT (Auto >= 1680px or explicit data-layout)
+   WIDESCREEN 2-COLUMN SPLIT LAYOUT
+   - Automatic on screens >= 1680px (Split-Left default)
+   - Explicit Split-Left: body[data-layout="split-left"] (>= 1100px)
+   - Explicit Split-Right: body[data-layout="split-right"] (>= 1100px)
    ========================================================================== */
 
-/* Active when screen width >= 1680px OR when explicitly chosen via layout switcher */
+/* 1. Auto Split Layout on Widescreen (>= 1680px) when not set to single-column */
 @media (min-width: 1680px) {
   body:not([data-layout="single"]) .topbar {
     max-width: 100%;
@@ -1182,12 +1185,12 @@ input[type="checkbox"] {
     max-width: 100%;
     padding: 24px 40px;
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(420px, 0.75fr);
     gap: 32px;
     align-items: start;
   }
 
   body:not([data-layout="single"]) .pane-projects {
+    grid-area: projects;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -1195,6 +1198,7 @@ input[type="checkbox"] {
   }
 
   body:not([data-layout="single"]) .pane-cockpit {
+    grid-area: cockpit;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -1215,14 +1219,12 @@ input[type="checkbox"] {
     order: unset;
   }
 
-  /* Sticky list tools at top of left panel */
   body:not([data-layout="single"]) .list-tools {
     position: sticky;
     top: 76px;
     z-index: 10;
   }
 
-  /* Widescreen action card & insights become visible */
   body:not([data-layout="single"]) .widescreen-action-card:not([hidden]) {
     display: flex !important;
   }
@@ -1231,92 +1233,49 @@ input[type="checkbox"] {
     display: flex !important;
   }
 
-  /* Bottom tray is hidden on widescreen when action card is active in the sidebar */
   body:not([data-layout="single"]) .tray {
     display: none !important;
   }
+
+  /* Default split on widescreen (when not split-right): Projects Left, Cockpit Right */
+  body:not([data-layout="single"]):not([data-layout="split-right"]) .page {
+    grid-template-columns: minmax(0, 1.25fr) minmax(420px, 0.75fr);
+    grid-template-areas: "projects cockpit";
+  }
 }
 
-/* Explicit Alternative: Cockpit Left / Projects Right */
-body[data-layout="split-right"] .topbar {
-  max-width: 100%;
-  padding: 16px 40px;
-}
-
-body[data-layout="split-right"] .page {
-  max-width: 100%;
-  padding: 24px 40px;
-  display: grid;
-  grid-template-columns: minmax(420px, 0.75fr) minmax(0, 1.25fr);
-  gap: 32px;
-  align-items: start;
-}
-
-body[data-layout="split-right"] .pane-cockpit {
-  grid-column: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  position: sticky;
-  top: 76px;
-  max-height: calc(100vh - 96px);
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-body[data-layout="split-right"] .pane-projects {
-  grid-column: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-body[data-layout="split-right"] .list-tools {
-  position: sticky;
-  top: 76px;
-  z-index: 10;
-}
-
-body[data-layout="split-right"] .widescreen-action-card:not([hidden]) {
-  display: flex !important;
-}
-
-body[data-layout="split-right"] .insights-card:not([hidden]) {
-  display: flex !important;
-}
-
-body[data-layout="split-right"] .tray {
-  display: none !important;
-}
-
-/* Explicit Layout: Split-Left even below 1680px if user forces it and width >= 1200px */
-@media (min-width: 1200px) {
-  body[data-layout="split-left"] .topbar {
+/* 2. Explicit Split Layouts (>= 1100px) when toggled by user */
+@media (min-width: 1100px) {
+  body[data-layout="split-left"] .topbar,
+  body[data-layout="split-right"] .topbar {
     max-width: 100%;
     padding: 16px 32px;
   }
 
-  body[data-layout="split-left"] .page {
+  body[data-layout="split-left"] .page,
+  body[data-layout="split-right"] .page {
     max-width: 100%;
-    padding: 20px 32px;
+    padding: 24px 32px;
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
-    gap: 24px;
+    gap: 28px;
     align-items: start;
   }
 
-  body[data-layout="split-left"] .pane-projects {
+  body[data-layout="split-left"] .pane-projects,
+  body[data-layout="split-right"] .pane-projects {
+    grid-area: projects;
     display: flex;
     flex-direction: column;
     gap: 16px;
     min-width: 0;
   }
 
-  body[data-layout="split-left"] .pane-cockpit {
+  body[data-layout="split-left"] .pane-cockpit,
+  body[data-layout="split-right"] .pane-cockpit {
+    grid-area: cockpit;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
     position: sticky;
     top: 76px;
     max-height: calc(100vh - 96px);
@@ -1324,17 +1283,67 @@ body[data-layout="split-right"] .tray {
     padding-right: 4px;
   }
 
-  body[data-layout="split-left"] .widescreen-action-card:not([hidden]) {
+  /* Reset flex orders in grid */
+  body[data-layout="split-left"] #scanForm,
+  body[data-layout="split-left"] #progressContainer,
+  body[data-layout="split-left"] #overviewSection,
+  body[data-layout="split-left"] .list-tools,
+  body[data-layout="split-left"] #emptyState,
+  body[data-layout="split-left"] #projectList,
+  body[data-layout="split-right"] #scanForm,
+  body[data-layout="split-right"] #progressContainer,
+  body[data-layout="split-right"] #overviewSection,
+  body[data-layout="split-right"] .list-tools,
+  body[data-layout="split-right"] #emptyState,
+  body[data-layout="split-right"] #projectList {
+    order: unset;
+  }
+
+  body[data-layout="split-left"] .list-tools,
+  body[data-layout="split-right"] .list-tools {
+    position: sticky;
+    top: 76px;
+    z-index: 10;
+  }
+
+  body[data-layout="split-left"] .widescreen-action-card:not([hidden]),
+  body[data-layout="split-right"] .widescreen-action-card:not([hidden]) {
     display: flex !important;
   }
 
-  body[data-layout="split-left"] .insights-card:not([hidden]) {
+  body[data-layout="split-left"] .insights-card:not([hidden]),
+  body[data-layout="split-right"] .insights-card:not([hidden]) {
     display: flex !important;
   }
 
-  body[data-layout="split-left"] .tray {
+  body[data-layout="split-left"] .tray,
+  body[data-layout="split-right"] .tray {
     display: none !important;
   }
+
+  /* Split-Left: Projects Left, Cockpit Right */
+  body[data-layout="split-left"] .page {
+    grid-template-columns: minmax(0, 1.2fr) minmax(400px, 0.8fr);
+    grid-template-areas: "projects cockpit";
+  }
+
+  /* Split-Right: Cockpit Left, Projects Right */
+  body[data-layout="split-right"] .page {
+    grid-template-columns: minmax(400px, 0.8fr) minmax(0, 1.2fr);
+    grid-template-areas: "cockpit projects";
+  }
+}
+
+.pane-cockpit .picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pane-cockpit .picker .field {
+  flex: 1 1 200px;
+  min-width: 140px;
 }
 
 /* ==========================================================================
