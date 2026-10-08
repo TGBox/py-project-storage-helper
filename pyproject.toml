@@ -1,6 +1,6 @@
 [project]
 name = "py-project-storage-helper"
-version = "1.1.0"
+version = "1.2.0"
 description = "A python app to manage your code project folders and safe valuable disk space."
 readme = "README.md"
 requires-python = ">=3.14"

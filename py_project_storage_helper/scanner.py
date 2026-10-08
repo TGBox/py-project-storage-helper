@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Optional
@@ -58,7 +59,6 @@ DISPOSABLE_CATEGORIES: dict[str, str] = {
     ".venv": "python",
     "venv": "python",
     "env": "python",
-    ".env": "python",  # only if is_dir
     "__pycache__": "cache",
     ".pytest_cache": "cache",
     ".mypy_cache": "cache",
@@ -73,6 +73,18 @@ DISPOSABLE_CATEGORIES: dict[str, str] = {
     # General caches
     ".cache": "cache",
 }
+
+# Generic names that only count as disposable when they really are a virtual environment.
+# ".env" is deliberately absent: that name usually holds secrets or config, never a venv.
+VENV_NAMES = {".venv", "venv", "env"}
+
+
+def is_disposable(path: str | Path, name: str) -> bool:
+    """True if a directory with this name may be offered for deletion."""
+    if name not in DISPOSABLE_CATEGORIES:
+        return False
+    return name not in VENV_NAMES or os.path.isfile(os.path.join(path, "pyvenv.cfg"))
+
 
 @dataclass
 class DisposableFolder:
@@ -106,8 +118,16 @@ def format_size(size_bytes: int) -> str:
         return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 
+def is_real_dir(entry: os.DirEntry) -> bool:
+    """Directory that is neither a symlink nor a Windows junction (pnpm uses junctions heavily)."""
+    return entry.is_dir(follow_symlinks=False) and not entry.is_junction()
+
+
 def get_dir_size_fast(path: str | Path, should_stop: Optional[Callable[[], bool]] = None) -> tuple[int, int]:
-    """Calculate directory size in bytes and file count using os.scandir."""
+    """Calculate directory size in bytes and file count using os.scandir.
+
+    Links and junctions are not followed, so nothing outside the folder is counted twice.
+    """
     total_size = 0
     file_count = 0
     stack = [str(path)]
@@ -124,7 +144,7 @@ def get_dir_size_fast(path: str | Path, should_stop: Optional[Callable[[], bool]
                         if entry.is_file(follow_symlinks=False):
                             total_size += entry.stat(follow_symlinks=False).st_size
                             file_count += 1
-                        elif entry.is_dir(follow_symlinks=False):
+                        elif is_real_dir(entry):
                             stack.append(entry.path)
                     except OSError:
                         continue
@@ -141,7 +161,7 @@ def is_project_root(entries: Iterable[os.DirEntry]) -> bool:
             name = entry.name
             if name in PROJECT_ROOT_MARKERS:
                 return True
-            if name in PROJECT_ROOT_DISPOSABLES and entry.is_dir(follow_symlinks=False):
+            if name in PROJECT_ROOT_DISPOSABLES and is_real_dir(entry) and is_disposable(entry.path, name):
                 return True
         except OSError:
             continue
@@ -158,13 +178,12 @@ def collect_project_disposables(
     """
     disposables: list[DisposableFolder] = []
     nested_projects: list[Path] = []
-    # Queue: (dir_path, current_subdepth)
-    queue: list[tuple[Path, int]] = [(project_path, 0)]
+    queue: deque[tuple[Path, int]] = deque([(project_path, 0)])
 
     while queue:
         if should_stop and should_stop():
             break
-        curr_dir, subdepth = queue.pop(0)
+        curr_dir, subdepth = queue.popleft()
 
         try:
             entries = list(os.scandir(curr_dir))
@@ -179,14 +198,14 @@ def collect_project_disposables(
 
         for entry in entries:
             try:
-                if not entry.is_dir(follow_symlinks=False):
+                if not is_real_dir(entry):
                     continue
 
                 name = entry.name
                 if name == ".git":
                     continue
 
-                if name in DISPOSABLE_CATEGORIES:
+                if is_disposable(entry.path, name):
                     size_bytes, file_count = get_dir_size_fast(entry.path, should_stop=should_stop)
                     rel_name = os.path.relpath(entry.path, project_path)
                     disposables.append(
@@ -220,13 +239,13 @@ def find_projects_and_disposables(
         return []
 
     projects: list[ProjectInfo] = []
-    queue: list[tuple[Path, int]] = [(root_path, 0)]
+    queue: deque[tuple[Path, int]] = deque([(root_path, 0)])
 
     while queue:
         if should_stop and should_stop():
             break
 
-        current_path, depth = queue.pop(0)
+        current_path, depth = queue.popleft()
 
         if on_progress:
             on_progress(f"Scanne: {current_path.name or str(current_path)}")
@@ -271,7 +290,7 @@ def find_projects_and_disposables(
             # Not a project root, continue descending down non-disposable children
             for entry in entries:
                 try:
-                    if entry.is_dir(follow_symlinks=False):
+                    if is_real_dir(entry):
                         name = entry.name
                         if name == ".git" or name in DISPOSABLE_CATEGORIES:
                             continue

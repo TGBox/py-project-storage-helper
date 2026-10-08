@@ -9,7 +9,7 @@ from typing import Optional
 
 import send2trash
 
-from py_project_storage_helper.scanner import DISPOSABLE_CATEGORIES, get_dir_size_fast
+from py_project_storage_helper.scanner import DISPOSABLE_CATEGORIES, VENV_NAMES
 
 
 @dataclass
@@ -17,7 +17,6 @@ class DeleteResult:
     """Result of deleting a single item."""
     path: str
     success: bool
-    freed_bytes: int = 0
     error: Optional[str] = None
 
 
@@ -47,6 +46,10 @@ def is_safe_to_delete(dir_path: str | Path) -> tuple[bool, str]:
     if name not in DISPOSABLE_CATEGORIES and not name.endswith(".egg-info"):
         return False, f"'{name}' ist kein bekannter Einweg-/Cache-Ordner."
 
+    # Generic names like "env" are only removed if they really are a virtual environment
+    if name in VENV_NAMES and not (path / "pyvenv.cfg").is_file():
+        return False, f"'{name}' ist keine Python-Umgebung (pyvenv.cfg fehlt)."
+
     return True, ""
 
 
@@ -62,16 +65,15 @@ def delete_directory(
     if not safe:
         return DeleteResult(path=str(path), success=False, error=reason)
 
+    # Freed space is not re-measured here: the GUI already knows each folder's size from the scan,
+    # and walking a large node_modules a second time would double the cost of every deletion.
     try:
-        # Pre-measure size to report freed space
-        size_bytes, _ = get_dir_size_fast(path)
-
         if use_trash:
             # send2trash on Windows moves directory into Recycle Bin
             send2trash.send2trash(str(path))
         else:
             shutil.rmtree(path)
 
-        return DeleteResult(path=str(path), success=True, freed_bytes=size_bytes)
+        return DeleteResult(path=str(path), success=True)
     except Exception as exc:
         return DeleteResult(path=str(path), success=False, error=str(exc))

@@ -48,7 +48,8 @@ class TestScannerAndCleaner(unittest.TestCase):
         (p1 / "pyproject.toml").write_text("[project]\nname='test'", encoding="utf-8")
         venv = p1 / ".venv"
         venv.mkdir()
-        (venv / "dummy.lib").write_bytes(b"0" * 1024)
+        (venv / "pyvenv.cfg").write_bytes(b"0" * 24)
+        (venv / "dummy.lib").write_bytes(b"0" * 1000)
 
         # Create Project 2 (Node)
         p2 = self.root / "subfolder" / "my_node_project"
@@ -97,6 +98,7 @@ class TestScannerAndCleaner(unittest.TestCase):
         # Valid disposable folder must be accepted
         venv_dir = self.root / ".venv"
         venv_dir.mkdir()
+        (venv_dir / "pyvenv.cfg").write_text("home = x", encoding="utf-8")
         safe, _ = is_safe_to_delete(venv_dir)
         self.assertTrue(safe)
 
@@ -108,7 +110,6 @@ class TestScannerAndCleaner(unittest.TestCase):
         res = delete_directory(target, use_trash=False)
         self.assertTrue(res.success)
         self.assertFalse(target.exists())
-        self.assertEqual(res.freed_bytes, 3)
 
 
 if __name__ == "__main__":

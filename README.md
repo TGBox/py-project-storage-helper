@@ -6,18 +6,16 @@ Eine schlanke, moderne Desktop-Anwendung zur Erkennung und Bereinigung von speic
 
 ## Features
 
-- **Schicke Desktop-GUI (PyWebView)**: Reibungslose native Fensteroberfläche mit modernem Dark-Mode-Design, Live-Statistiken und flüssigen Interaktionen.
-- **Echtzeit Live-Scanning**: Gefundene Projekte und freigebbarer Speicherplatz werden während des Scannens in Echtzeit gestreamt (mit Stop-Möglichkeit).
-- **Intelligente Projekterkennung**: Erkennt Entwicklungsprojekte automatisch anhand von Markern (`.git`, `package.json`, `pyproject.toml`, `Cargo.toml`, etc.) oder enthaltener Umgebungen, ohne unnötig tief in Bibliotheksordner abzusteigen.
-- **Granulare Auswahl**:
-  - Aufklappbare Projekt-Karten mit genauer Pfad- und Größenauflistung pro Ordner.
-  - Checkboxen für einzelne Ordner sowie Projekt- und globale Sammelauswahl.
-  - Filter nach Kategorien: `node_modules`, `.venv / venv`, `Build & Dist`, `Caches` sowie Live-Suche.
-- **Sicherheitsmechanismen**:
-  - Standardmäßig Verschieben in den **Windows-Papierkorb** (`send2trash`), sodass versehentliche Löschungen jederzeit wiederhergestellt werden können.
-  - Option für dauerhaftes Löschen im Bestätigungsdialog.
-  - Sicherheitsfilter: `.git`-Verzeichnisse, Systemordner und Projekt-Quelldateien sind strikt vor dem Löschen geschützt.
-- **Direktintegration**: Mit einem Klick das Projektverzeichnis direkt im Windows Explorer öffnen.
+- **Desktop-GUI (PyWebView)**: Zeigt oben, wie viel Platz insgesamt freigebbar ist, aufgeteilt nach Kategorie (Node-Pakete, Python-Umgebungen, Build-Ausgaben, Caches). Ein Klick auf eine Kategorie filtert die Liste. Hell- und Dunkelmodus folgen der Windows-Einstellung.
+- **Live-Scan**: Gefundene Projekte erscheinen während des Scans, sortiert nach Größe. Der Scan lässt sich jederzeit stoppen.
+- **Projekterkennung**: Erkennt Projekte an Markern (`.git`, `package.json`, `pyproject.toml`, `Cargo.toml` usw.), auch verschachtelte Pakete in Monorepos.
+- **Auswahl**: Einzelne Ordner, ganze Projekte oder alle sichtbaren Ordner markieren. Markierte Ordner werden gelb hervorgehoben.
+- **Sicherheit**:
+  - Standardmäßig landen Ordner im **Windows-Papierkorb** (`send2trash`). Endgültiges Löschen muss im Bestätigungsdialog ausdrücklich gewählt werden.
+  - Gelöscht werden nur Ordner, die der letzte Scan gefunden hat, und nur bekannte Wegwerf-Ordner. `.git` und alles darin ist tabu.
+  - `env`, `venv` und `.venv` gelten nur als löschbar, wenn sie eine `pyvenv.cfg` enthalten. `.env` wird nie angeboten.
+  - Symlinks und Junctions (z. B. von pnpm) werden beim Messen nicht verfolgt.
+- **Explorer**: Projektordner mit einem Klick im Windows Explorer öffnen.
 
 ---
 
