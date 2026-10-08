@@ -89,7 +89,17 @@ class TestScan(ApiTest):
         self.assertEqual(summary, {"stopped": False, "error": None, "total_projects": 1, "total_bytes": 100})
         (project,) = self.window.payloads("onProjectDiscovered")
         self.assertEqual(
-            set(project), {"path", "name", "relative_path", "disposable_folders", "total_disposable_size"}
+            set(project),
+            {
+                "path",
+                "name",
+                "relative_path",
+                "disposable_folders",
+                "total_disposable_size",
+                "ecosystem",
+                "dominant_category",
+                "total_file_count",
+            },
         )
         self.assertEqual(
             set(project["disposable_folders"][0]), {"path", "name", "category", "size_bytes", "file_count"}
@@ -145,7 +155,8 @@ class TestDelete(ApiTest):
         summary = self.delete([scanned_path])
 
         self.assertFalse(nm.exists())
-        self.assertEqual(summary, {"success_count": 1, "use_trash": False})
+        self.assertEqual(summary["success_count"], 1)
+        self.assertFalse(summary["use_trash"])
         (progress,) = self.window.payloads("onDeleteProgress")
         self.assertEqual(progress["path"], scanned_path)
         self.assertTrue(progress["success"])

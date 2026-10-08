@@ -1,11 +1,12 @@
 [project]
 name = "py-project-storage-helper"
-version = "1.2.1"
+version = "2.0.0"
 description = "A python app to manage your code project folders and safe valuable disk space."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "pywebview>=6.2.1",
+    "reportlab>=5.0.1",
     "send2trash>=2.1.0",
 ]
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="auto">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,11 +10,47 @@
 <body>
 
   <header class="topbar">
-    <h1>Project Storage Helper</h1>
-    <p class="status" id="status" data-state="idle">
-      <span class="status-dot" aria-hidden="true"></span>
-      <span id="statusText">Bereit</span>
-    </p>
+    <div class="topbar-brand">
+      <svg class="brand-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        <line x1="12" y1="11" x2="12" y2="17"></line>
+        <line x1="9" y1="14" x2="15" y2="14"></line>
+      </svg>
+      <h1>Project Storage Helper</h1>
+    </div>
+    
+    <div class="topbar-controls">
+      <p class="status" id="status" data-state="idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="statusText">Bereit</span>
+      </p>
+
+      <button type="button" id="themeToggleBtn" class="icon-btn" title="Farbschema wechseln (Hell/Dunkel)" aria-label="Farbschema wechseln">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+
+      <button type="button" id="fullscreenToggleBtn" class="icon-btn" title="Vollbildmodus umschalten (F11)" aria-label="Vollbildmodus umschalten">
+        <svg class="icon-expand" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+        <svg class="icon-compress" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <main class="page">
@@ -25,11 +61,34 @@
              placeholder="Ordner mit deinen Projekten, z. B. C:\Users\…\Projekte">
       <button type="button" id="browseBtn" class="btn">Ordner wählen</button>
       <button type="submit" id="scanBtn" class="btn btn-primary">Scannen</button>
-      <button type="button" id="stopBtn" class="btn" hidden>Scan stoppen</button>
+      <button type="button" id="stopBtn" class="btn btn-stop" hidden data-stage="0">
+        <span class="stop-dot"></span>
+        <span class="stop-text">Stoppen</span>
+      </button>
     </form>
 
-    <div class="progress" id="progressContainer" hidden>
-      <div class="progress-line" aria-hidden="true"></div>
+    <!-- Dual Progress Panel -->
+    <div class="progress-card" id="progressContainer" hidden>
+      <div class="progress-section">
+        <div class="progress-header">
+          <span class="progress-label">Gesamtfortschritt</span>
+          <span id="overallProgressText" class="progress-counter">0 %</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="overallProgressBar" class="progress-fill progress-fill-overall" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-header">
+          <span class="progress-label" id="itemProgressLabel">Aktueller Vorgang</span>
+          <span id="itemProgressText" class="progress-counter">Wird vorbereitet …</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="itemProgressBar" class="progress-fill progress-fill-item" style="width: 0%;"></div>
+        </div>
+      </div>
+      
       <p id="progressMessage" class="progress-message" aria-live="polite"></p>
     </div>
 
@@ -42,11 +101,47 @@
       <div class="legend" id="legend" role="group" aria-label="Nach Kategorie filtern"></div>
     </section>
 
+    <!-- Filter, Sort and Accordion Controls -->
     <div class="list-tools">
-      <label for="searchInput" class="visually-hidden">Projekte filtern</label>
-      <input type="search" id="searchInput" class="field field-search" placeholder="Projekte filtern" spellcheck="false">
-      <button type="button" id="selectAllBtn" class="btn btn-quiet">Alle sichtbaren markieren</button>
-      <button type="button" id="deselectAllBtn" class="btn btn-quiet">Markierung aufheben</button>
+      <div class="filter-group">
+        <label for="searchInput" class="visually-hidden">Projekte durchsuchen</label>
+        <div class="search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" id="searchInput" class="field field-search" placeholder="Projekte suchen …" spellcheck="false">
+        </div>
+
+        <div class="sort-wrap">
+          <label for="sortBySelect" class="sort-label">Sortieren:</label>
+          <select id="sortBySelect" class="field field-select">
+            <option value="size">Größe (Speicher)</option>
+            <option value="name">Name</option>
+            <option value="ecosystem">Art (Ökosystem &amp; Typ)</option>
+            <option value="files">Anzahl Dateien</option>
+          </select>
+          <button type="button" id="sortDirBtn" class="btn btn-icon-only" title="Sortierrichtung umschalten (Auf-/Absteigend)" aria-label="Sortierrichtung">
+            <svg class="icon-desc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 4h13M3 8h9M3 12h5m8-4v12m0 0l-4-4m4 4l4-4"></path>
+            </svg>
+            <svg class="icon-asc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+              <path d="M3 4h5M3 8h9M3 12h13m4 8V8m0 0l-4 4m4-4l4 4"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="actions-group">
+        <div class="btn-group">
+          <button type="button" id="expandAllBtn" class="btn btn-secondary" title="Alle Projekt-Panels öffnen">Alle aufklappen</button>
+          <button type="button" id="collapseAllBtn" class="btn btn-secondary" title="Alle Projekt-Panels schließen">Alle zuklappen</button>
+        </div>
+        <div class="btn-group">
+          <button type="button" id="selectAllBtn" class="btn btn-quiet">Alle markieren</button>
+          <button type="button" id="deselectAllBtn" class="btn btn-quiet">Aufheben</button>
+        </div>
+      </div>
     </div>
 
     <div id="emptyState" class="empty">
@@ -58,6 +153,7 @@
 
   </main>
 
+  <!-- Sticky Bottom Tray -->
   <aside id="bottomBar" class="tray" aria-label="Markierte Ordner">
     <p class="tray-summary">
       <span id="bottomSelectedSize" class="tray-size">0 B</span>
@@ -67,22 +163,104 @@
     <button type="button" id="bottomDeleteBtn" class="btn btn-primary">Markierte entfernen</button>
   </aside>
 
-  <dialog id="confirmModal" class="dialog" aria-labelledby="modalTitle">
-    <form method="dialog">
-      <h2 id="modalTitle" class="dialog-title">0 Ordner entfernen?</h2>
-      <p class="dialog-text">Damit werden <strong id="modalFreedSpace">0 B</strong> frei.</p>
-      <label class="dialog-option">
-        <input type="checkbox" id="modalTrashCheckbox" checked>
-        <span>
-          In den Papierkorb verschieben (empfohlen)
-          <small id="modalTrashHint">Du kannst die Ordner dort wiederherstellen.</small>
-        </span>
-      </label>
-      <div class="dialog-actions">
-        <button value="cancel" class="btn">Abbrechen</button>
-        <button value="confirm" id="modalConfirmBtn" class="btn btn-primary">In Papierkorb verschieben</button>
+  <!-- Detailed Confirmation Modal with Deselection and Cancel-Safety -->
+  <dialog id="confirmModal" class="dialog dialog-wide" aria-labelledby="modalTitle">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="modalTitle" class="dialog-title">Löschung überprüfen und bestätigen</h2>
+        <p class="dialog-subtitle">
+          Ausgewählt: <strong id="modalSummaryCount">0 Ordner</strong> in <strong id="modalSummaryProjects">0 Projekten</strong> mit insgesamt <strong id="modalFreedSpace">0 B</strong>.
+        </p>
+        <p class="dialog-hint">Du kannst einzelne Ordner unten abwählen. Bei Abbruch bleibt deine ursprüngliche Auswahl vollständig erhalten.</p>
       </div>
-    </form>
+
+      <div class="dialog-scroll-area">
+        <div id="modalItemsList" class="confirm-items-list">
+          <!-- Dynamically populated with project groups and checkboxes -->
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <label class="dialog-option">
+          <input type="checkbox" id="modalTrashCheckbox" checked>
+          <span>
+            <strong>In den Papierkorb verschieben (empfohlen)</strong>
+            <small id="modalTrashHint">Du kannst die Ordner bei Bedarf dort wiederherstellen.</small>
+          </span>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" id="modalCancelBtn" class="btn">Abbrechen</button>
+          <button type="button" id="modalConfirmBtn" class="btn btn-primary">Ausgewählte entfernen</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Deletion Protocol & Report Modal with PDF Export -->
+  <dialog id="reportModal" class="dialog dialog-wide" aria-labelledby="reportTitle">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <div class="report-badge" id="reportBadge">Erfolgreich abgeschlossen</div>
+        <h2 id="reportTitle" class="dialog-title">Löschprotokoll &amp; Zusammenfassung</h2>
+        <p id="reportTimestamp" class="dialog-subtitle"></p>
+      </div>
+
+      <div class="report-kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Freigegebener Speicher</span>
+          <span class="kpi-value highlight" id="reportFreedBytes">0 B</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Gelöschte Ordner</span>
+          <span class="kpi-value" id="reportFoldersCount">0</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Gelöschte Dateien</span>
+          <span class="kpi-value" id="reportFilesCount">0</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Bereinigungsmethode</span>
+          <span class="kpi-value" id="reportMethod">Papierkorb</span>
+        </div>
+      </div>
+
+      <div class="report-section">
+        <h3 class="report-section-title">Verteilung nach Kategorien</h3>
+        <div id="reportCategoryBars" class="report-category-bars"></div>
+      </div>
+
+      <div class="report-section">
+        <h3 class="report-section-title">Bereinigte Projekte &amp; Ordner</h3>
+        <div class="dialog-scroll-area report-table-wrap">
+          <table class="report-table" id="reportTable">
+            <thead>
+              <tr>
+                <th>Projekt / Ordner</th>
+                <th>Kategorie</th>
+                <th class="text-right">Dateien</th>
+                <th class="text-right">Freigegeben</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dialog-footer report-footer">
+        <button type="button" id="reportExportPdfBtn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          PDF-Bericht exportieren
+        </button>
+        <button type="button" id="reportCloseBtn" class="btn">Schließen</button>
+      </div>
+    </div>
   </dialog>
 
   <div id="toastContainer" class="toasts" aria-live="polite"></div>

@@ -79,6 +79,42 @@ DISPOSABLE_CATEGORIES: dict[str, str] = {
 VENV_NAMES = {".venv", "venv", "env"}
 
 
+# Marker to ecosystem mapping
+ECOSYSTEM_MARKERS: dict[str, str] = {
+    # Python
+    "pyproject.toml": "Python",
+    "requirements.txt": "Python",
+    "Pipfile": "Python",
+    "setup.py": "Python",
+    "setup.cfg": "Python",
+    ".venv": "Python",
+    "venv": "Python",
+    "env": "Python",
+    # Node / Web
+    "package.json": "Node.js",
+    "node_modules": "Node.js",
+    "bun.lockb": "Node.js",
+    "deno.json": "Deno",
+    "deno.jsonc": "Deno",
+    # Rust
+    "Cargo.toml": "Rust",
+    # Go
+    "go.mod": "Go",
+    # Java / Kotlin
+    "pom.xml": "Java",
+    "build.gradle": "Java / Gradle",
+    "build.gradle.kts": "Kotlin / Gradle",
+    # PHP
+    "composer.json": "PHP",
+    # Elixir
+    "mix.exs": "Elixir",
+    # Dart / Flutter
+    "pubspec.yaml": "Dart / Flutter",
+    # C / C++
+    "CMakeLists.txt": "C / C++",
+}
+
+
 def is_disposable(path: str | Path, name: str) -> bool:
     """True if a directory with this name may be offered for deletion."""
     if name not in DISPOSABLE_CATEGORIES:
@@ -104,6 +140,33 @@ class ProjectInfo:
     relative_path: str
     disposable_folders: list[DisposableFolder] = field(default_factory=list)
     total_disposable_size: int = 0
+    ecosystem: str = "Allgemein"
+    dominant_category: str = "cache"
+    total_file_count: int = 0
+
+
+def detect_ecosystem(entries: Iterable[os.DirEntry], disposables: list[DisposableFolder]) -> str:
+    """Detect primary ecosystem or programming language for a project."""
+    for entry in entries:
+        if entry.name in ECOSYSTEM_MARKERS:
+            return ECOSYSTEM_MARKERS[entry.name]
+    # Fallback to disposable folder categories if markers were absent
+    for f in disposables:
+        if f.category == "python":
+            return "Python"
+        if f.category == "node":
+            return "Node.js"
+    return "Allgemein"
+
+
+def get_dominant_category(disposables: list[DisposableFolder]) -> str:
+    """Identify which disposable category takes up the most disk space."""
+    if not disposables:
+        return "cache"
+    cat_sizes: dict[str, int] = {}
+    for f in disposables:
+        cat_sizes[f.category] = cat_sizes.get(f.category, 0) + f.size_bytes
+    return max(cat_sizes.items(), key=lambda item: item[1])[0]
 
 
 def format_size(size_bytes: int) -> str:
@@ -230,9 +293,11 @@ def find_projects_and_disposables(
     on_project_found: Optional[Callable[[ProjectInfo], None]] = None,
     on_progress: Optional[Callable[[str], None]] = None,
     should_stop: Optional[Callable[[], bool]] = None,
+    should_stop_after_project: Optional[Callable[[], bool]] = None,
 ) -> list[ProjectInfo]:
     """
     Walk root directory up to MAX_DEPTH and find all projects and their disposable folders.
+    Supports immediate stop (should_stop) and soft stop after the current project (should_stop_after_project).
     """
     root_path = Path(root_dir).resolve()
     if not root_path.exists() or not root_path.is_dir():
@@ -269,18 +334,29 @@ def find_projects_and_disposables(
             if rel_path == ".":
                 rel_path = current_path.name
 
+            ecosystem = detect_ecosystem(entries, disposables)
+            dominant_cat = get_dominant_category(disposables)
+            file_count = sum(f.file_count for f in disposables)
+
             project = ProjectInfo(
                 path=str(current_path),
                 name=current_path.name,
                 relative_path=rel_path,
                 disposable_folders=disposables,
                 total_disposable_size=sum(f.size_bytes for f in disposables),
+                ecosystem=ecosystem,
+                dominant_category=dominant_cat,
+                total_file_count=file_count,
             )
 
             if project.disposable_folders:
                 projects.append(project)
                 if on_project_found:
                     on_project_found(project)
+
+            # Check if soft stop was requested right after this project
+            if should_stop_after_project and should_stop_after_project():
+                break
 
             # Enqueue nested subprojects if any
             for sub_proj in nested_subprojects:
