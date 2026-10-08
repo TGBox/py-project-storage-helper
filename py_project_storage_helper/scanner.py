@@ -7,6 +7,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+MAX_DEPTH = 5  # how deep to search for projects below the scan root
+MAX_SUBDEPTH = 3  # how deep to search for disposables inside a project
+
 # Standalone indicators that strongly indicate a project root
 PROJECT_ROOT_MARKERS = {
     ".git",
@@ -71,23 +74,13 @@ DISPOSABLE_CATEGORIES: dict[str, str] = {
     ".cache": "cache",
 }
 
-CATEGORY_LABELS: dict[str, str] = {
-    "node": "Node.js (node_modules)",
-    "python": "Python (.venv / venv)",
-    "build": "Build & Dist",
-    "cache": "Caches",
-}
-
-
 @dataclass
 class DisposableFolder:
     """Represents a disposable folder inside a project."""
     path: str
     name: str
     category: str
-    category_label: str
     size_bytes: int = 0
-    size_human: str = "0 B"
     file_count: int = 0
 
 
@@ -99,11 +92,6 @@ class ProjectInfo:
     relative_path: str
     disposable_folders: list[DisposableFolder] = field(default_factory=list)
     total_disposable_size: int = 0
-    total_disposable_human: str = "0 B"
-
-    def recalculate_totals(self) -> None:
-        self.total_disposable_size = sum(f.size_bytes for f in self.disposable_folders)
-        self.total_disposable_human = format_size(self.total_disposable_size)
 
 
 def format_size(size_bytes: int) -> str:
@@ -138,9 +126,9 @@ def get_dir_size_fast(path: str | Path, should_stop: Optional[Callable[[], bool]
                             file_count += 1
                         elif entry.is_dir(follow_symlinks=False):
                             stack.append(entry.path)
-                    except (PermissionError, FileNotFoundError, OSError):
+                    except OSError:
                         continue
-        except (PermissionError, FileNotFoundError, OSError):
+        except OSError:
             continue
 
     return total_size, file_count
@@ -155,14 +143,13 @@ def is_project_root(entries: Iterable[os.DirEntry]) -> bool:
                 return True
             if name in PROJECT_ROOT_DISPOSABLES and entry.is_dir(follow_symlinks=False):
                 return True
-        except (OSError, PermissionError):
+        except OSError:
             continue
     return False
 
 
 def collect_project_disposables(
     project_path: Path,
-    max_subdepth: int = 3,
     should_stop: Optional[Callable[[], bool]] = None,
 ) -> tuple[list[DisposableFolder], list[Path]]:
     """
@@ -181,7 +168,7 @@ def collect_project_disposables(
 
         try:
             entries = list(os.scandir(curr_dir))
-        except (PermissionError, FileNotFoundError, OSError):
+        except OSError:
             continue
 
         # If this is a subdirectory (subdepth > 0) and has its own project markers,
@@ -200,24 +187,20 @@ def collect_project_disposables(
                     continue
 
                 if name in DISPOSABLE_CATEGORIES:
-                    category = DISPOSABLE_CATEGORIES[name]
-                    cat_label = CATEGORY_LABELS.get(category, category.capitalize())
                     size_bytes, file_count = get_dir_size_fast(entry.path, should_stop=should_stop)
                     rel_name = os.path.relpath(entry.path, project_path)
                     disposables.append(
                         DisposableFolder(
                             path=entry.path,
                             name=rel_name.replace("\\", "/"),
-                            category=category,
-                            category_label=cat_label,
+                            category=DISPOSABLE_CATEGORIES[name],
                             size_bytes=size_bytes,
-                            size_human=format_size(size_bytes),
                             file_count=file_count,
                         )
                     )
-                elif subdepth < max_subdepth:
+                elif subdepth < MAX_SUBDEPTH:
                     queue.append((Path(entry.path), subdepth + 1))
-            except (OSError, PermissionError):
+            except OSError:
                 continue
 
     return disposables, nested_projects
@@ -225,13 +208,12 @@ def collect_project_disposables(
 
 def find_projects_and_disposables(
     root_dir: str | Path,
-    max_depth: int = 5,
     on_project_found: Optional[Callable[[ProjectInfo], None]] = None,
     on_progress: Optional[Callable[[str], None]] = None,
     should_stop: Optional[Callable[[], bool]] = None,
 ) -> list[ProjectInfo]:
     """
-    Walk root directory up to max_depth and find all projects and their disposable folders.
+    Walk root directory up to MAX_DEPTH and find all projects and their disposable folders.
     """
     root_path = Path(root_dir).resolve()
     if not root_path.exists() or not root_path.is_dir():
@@ -251,7 +233,7 @@ def find_projects_and_disposables(
 
         try:
             entries = list(os.scandir(current_path))
-        except (PermissionError, FileNotFoundError, OSError):
+        except OSError:
             continue
 
         # Check if current_path is a project
@@ -273,8 +255,8 @@ def find_projects_and_disposables(
                 name=current_path.name,
                 relative_path=rel_path,
                 disposable_folders=disposables,
+                total_disposable_size=sum(f.size_bytes for f in disposables),
             )
-            project.recalculate_totals()
 
             if project.disposable_folders:
                 projects.append(project)
@@ -283,7 +265,7 @@ def find_projects_and_disposables(
 
             # Enqueue nested subprojects if any
             for sub_proj in nested_subprojects:
-                if depth + 1 <= max_depth:
+                if depth < MAX_DEPTH:
                     queue.append((sub_proj, depth + 1))
         else:
             # Not a project root, continue descending down non-disposable children
@@ -293,9 +275,9 @@ def find_projects_and_disposables(
                         name = entry.name
                         if name == ".git" or name in DISPOSABLE_CATEGORIES:
                             continue
-                        if depth < max_depth:
+                        if depth < MAX_DEPTH:
                             queue.append((Path(entry.path), depth + 1))
-                except (OSError, PermissionError):
+                except OSError:
                     continue
 
     return projects

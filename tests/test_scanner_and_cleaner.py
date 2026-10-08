@@ -1,6 +1,5 @@
 """Tests for scanner and cleaner modules."""
 
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -14,7 +13,6 @@ from py_project_storage_helper.scanner import (
 from py_project_storage_helper.cleaner import (
     is_safe_to_delete,
     delete_directory,
-    delete_directories_batch,
 )
 
 

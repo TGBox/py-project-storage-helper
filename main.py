@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 import webview
@@ -15,13 +14,7 @@ from py_project_storage_helper.scanner import find_projects_and_disposables, for
 def run_gui() -> None:
     """Launch the PyWebView desktop application."""
     api = StorageHelperApi()
-    gui_dir = Path(__file__).parent / "py_project_storage_helper" / "gui"
-    html_file = (gui_dir / "index.html").resolve()
-
-    if not html_file.exists():
-        print(f"Error: GUI HTML file not found at {html_file}", file=sys.stderr)
-        sys.exit(1)
-
+    html_file = Path(__file__).resolve().parent / "py_project_storage_helper" / "gui" / "index.html"
     window = webview.create_window(
         title="Project Storage Helper",
         url=str(html_file),
@@ -40,7 +33,7 @@ def run_cli_scan(path: str) -> None:
     print(f"Scanning {target}...")
     projects = find_projects_and_disposables(
         target,
-        on_project_found=lambda p: print(f"  [+] Found: {p.relative_path} ({p.total_disposable_human})"),
+        on_project_found=lambda p: print(f"  [+] Found: {p.relative_path} ({format_size(p.total_disposable_size)})"),
     )
     total_bytes = sum(p.total_disposable_size for p in projects)
     print(f"\nDone. Found {len(projects)} projects with disposable folders.")
