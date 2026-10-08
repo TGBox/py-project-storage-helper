@@ -42,6 +42,20 @@ class FakeWindow:
                 raise AssertionError(f"{name} was not called {count}x; calls: {self.names()}")
             time.sleep(0.01)
 
+    def create_file_dialog(
+        self,
+        dialog_type: int = 10,
+        directory: str = "",
+        allow_multiple: bool = False,
+        save_filename: str = "",
+        file_types: tuple[str, ...] = (),
+    ):
+        from webview.util import parse_file_type
+
+        for f in file_types:
+            parse_file_type(f)
+        return getattr(self, "file_dialog_result", None)
+
 
 class ApiTest(unittest.TestCase):
     def setUp(self):
@@ -182,5 +196,43 @@ class TestDelete(ApiTest):
         self.assertEqual([p["success"] for p in self.window.payloads("onDeleteProgress")], [False, True])
 
 
+class TestExportPdf(ApiTest):
+    def test_export_pdf_validates_file_types_and_generates_file(self):
+        report_data = {
+            "timestamp": "2026-10-08 20:00:00",
+            "summary": {
+                "freed_bytes": 1024,
+                "success_count": 1,
+                "use_trash": True,
+                "stopped": False,
+            },
+            "category_totals": {
+                "node": {"label": "Node-Pakete", "bytes": 1024, "folders": 1, "percentage": 100.0}
+            },
+            "projects": [
+                {
+                    "name": "web",
+                    "freed_bytes": 1024,
+                    "files_deleted": 1,
+                    "folders": [
+                        {"name": "node_modules", "category": "Node-Pakete", "bytes": 1024, "files": 1, "success": True}
+                    ],
+                }
+            ],
+        }
+        target_file = str(self.root / "export_test.pdf")
+        self.window.file_dialog_result = target_file
+        res = self.api.export_pdf_report(report_data)
+        self.assertEqual(res["status"], "ok")
+        self.assertEqual(res["path"], target_file)
+        self.assertTrue(Path(target_file).exists())
+
+    def test_export_pdf_cancelled_when_dialog_returns_none(self):
+        self.window.file_dialog_result = None
+        res = self.api.export_pdf_report({})
+        self.assertEqual(res["status"], "cancelled")
+
+
 if __name__ == "__main__":
     unittest.main()
+

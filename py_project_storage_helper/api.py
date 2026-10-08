@@ -296,7 +296,7 @@ class StorageHelperApi:
             result = self._window.create_file_dialog(
                 webview.FileDialog.SAVE,
                 save_filename="Speicher-Bereinigung-Protokoll.pdf",
-                file_types=("PDF-Dateien (*.pdf)", "Alle Dateien (*.*)"),
+                file_types=("PDF Dateien (*.pdf)", "Alle Dateien (*.*)"),
             )
             if not result:
                 return {"status": "cancelled"}
