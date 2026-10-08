@@ -7,7 +7,7 @@
   <title>Project Storage Helper</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-layout="auto">
 
   <header class="topbar">
     <div class="topbar-brand">
@@ -24,6 +24,13 @@
         <span class="status-dot" aria-hidden="true"></span>
         <span id="statusText">Bereit</span>
       </p>
+
+      <button type="button" id="layoutToggleBtn" class="icon-btn" title="Layout umschalten (Split / Einspaltig)" aria-label="Layout umschalten">
+        <svg class="icon-layout" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="12" y1="3" x2="12" y2="21"></line>
+        </svg>
+      </button>
 
       <button type="button" id="themeToggleBtn" class="icon-btn" title="Farbschema wechseln (Hell/Dunkel)" aria-label="Farbschema wechseln">
         <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -55,105 +62,163 @@
 
   <main class="page">
 
-    <form class="picker" id="scanForm">
-      <label for="folderInput" class="visually-hidden">Ordner mit deinen Projekten</label>
-      <input type="text" id="folderInput" class="field" spellcheck="false" autocomplete="off"
-             placeholder="Ordner mit deinen Projekten, z. B. C:\Users\…\Projekte">
-      <button type="button" id="browseBtn" class="btn">Ordner wählen</button>
-      <button type="submit" id="scanBtn" class="btn btn-primary">Scannen</button>
-      <button type="button" id="stopBtn" class="btn btn-stop" hidden data-stage="0">
-        <span class="stop-dot"></span>
-        <span class="stop-text">Stoppen</span>
-      </button>
-    </form>
+    <!-- Column: Projects Explorer Panel -->
+    <section class="pane-projects" aria-label="Projektübersicht">
+      <!-- Filter, Sort and Accordion Controls -->
+      <div class="list-tools">
+        <div class="filter-group">
+          <label for="searchInput" class="visually-hidden">Projekte durchsuchen</label>
+          <div class="search-wrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" id="searchInput" class="field field-search" placeholder="Projekte suchen …" spellcheck="false">
+          </div>
 
-    <!-- Dual Progress Panel -->
-    <div class="progress-card" id="progressContainer" hidden>
-      <div class="progress-section">
-        <div class="progress-header">
-          <span class="progress-label">Gesamtfortschritt</span>
-          <span id="overallProgressText" class="progress-counter">0 %</span>
+          <div class="sort-wrap">
+            <label for="sortBySelect" class="sort-label">Sortieren:</label>
+            <select id="sortBySelect" class="field field-select">
+              <option value="size">Größe (Speicher)</option>
+              <option value="name">Name</option>
+              <option value="ecosystem">Art (Ökosystem &amp; Typ)</option>
+              <option value="files">Anzahl Dateien</option>
+            </select>
+            <button type="button" id="sortDirBtn" class="btn btn-icon-only" title="Sortierrichtung umschalten (Auf-/Absteigend)" aria-label="Sortierrichtung">
+              <svg class="icon-desc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 4h13M3 8h9M3 12h5m8-4v12m0 0l-4-4m4 4l4-4"></path>
+              </svg>
+              <svg class="icon-asc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                <path d="M3 4h5M3 8h9M3 12h13m4 8V8m0 0l-4 4m4-4l4 4"></path>
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="progress-track" aria-hidden="true">
-          <div id="overallProgressBar" class="progress-fill progress-fill-overall" style="width: 0%;"></div>
+
+        <div class="actions-group">
+          <div class="btn-group">
+            <button type="button" id="expandAllBtn" class="btn btn-secondary" title="Alle Projekt-Panels öffnen">Alle aufklappen</button>
+            <button type="button" id="collapseAllBtn" class="btn btn-secondary" title="Alle Projekt-Panels schließen">Alle zuklappen</button>
+          </div>
+          <div class="btn-group">
+            <button type="button" id="selectAllBtn" class="btn btn-quiet">Alle markieren</button>
+            <button type="button" id="deselectAllBtn" class="btn btn-quiet">Aufheben</button>
+          </div>
         </div>
       </div>
 
-      <div class="progress-section">
-        <div class="progress-header">
-          <span class="progress-label" id="itemProgressLabel">Aktueller Vorgang</span>
-          <span id="itemProgressText" class="progress-counter">Wird vorbereitet …</span>
-        </div>
-        <div class="progress-track" aria-hidden="true">
-          <div id="itemProgressBar" class="progress-fill progress-fill-item" style="width: 0%;"></div>
-        </div>
+      <div id="emptyState" class="empty">
+        <h2 class="empty-title">Ordner wählen und scannen</h2>
+        <p class="empty-desc">Die App sucht in deinen Projekten nach <code>node_modules</code>, <code>.venv</code>, Build-Ausgaben und Caches und zeigt, wie viel Platz sie belegen. Gelöscht wird erst nach deiner Bestätigung.</p>
       </div>
-      
-      <p id="progressMessage" class="progress-message" aria-live="polite"></p>
-    </div>
 
-    <section class="overview" aria-labelledby="totalSize">
-      <p class="total">
-        <span id="totalSize" class="total-size">0 B</span>
-        <span id="totalText" class="total-text">freigebbar</span>
-      </p>
-      <div class="meter" id="meter" aria-hidden="true"></div>
-      <div class="legend" id="legend" role="group" aria-label="Nach Kategorie filtern"></div>
+      <div id="projectList" class="projects" aria-label="Gefundene Projekte"></div>
     </section>
 
-    <!-- Filter, Sort and Accordion Controls -->
-    <div class="list-tools">
-      <div class="filter-group">
-        <label for="searchInput" class="visually-hidden">Projekte durchsuchen</label>
-        <div class="search-wrap">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon" aria-hidden="true">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    <!-- Column: Cockpit, Analytics & Actions Panel -->
+    <aside class="pane-cockpit" aria-label="Steuerung und Analyse">
+
+      <form class="picker" id="scanForm">
+        <label for="folderInput" class="visually-hidden">Ordner mit deinen Projekten</label>
+        <input type="text" id="folderInput" class="field" spellcheck="false" autocomplete="off"
+               placeholder="Ordner mit deinen Projekten, z. B. C:\Users\…\Projekte">
+        <button type="button" id="browseBtn" class="btn">Ordner wählen</button>
+        <button type="submit" id="scanBtn" class="btn btn-primary">Scannen</button>
+        <button type="button" id="stopBtn" class="btn btn-stop" hidden data-stage="0">
+          <span class="stop-dot"></span>
+          <span class="stop-text">Stoppen</span>
+        </button>
+      </form>
+
+      <!-- Dual Progress Panel -->
+      <div class="progress-card" id="progressContainer" hidden>
+        <div class="progress-section">
+          <div class="progress-header">
+            <span class="progress-label">Gesamtfortschritt</span>
+            <span id="overallProgressText" class="progress-counter">0 %</span>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="overallProgressBar" class="progress-fill progress-fill-overall" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <div class="progress-header">
+            <span class="progress-label" id="itemProgressLabel">Aktueller Vorgang</span>
+            <span id="itemProgressText" class="progress-counter">Wird vorbereitet …</span>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="itemProgressBar" class="progress-fill progress-fill-item" style="width: 0%;"></div>
+          </div>
+        </div>
+        
+        <p id="progressMessage" class="progress-message" aria-live="polite"></p>
+      </div>
+
+      <!-- Tufte-Style Storage Overview Cockpit -->
+      <section class="overview" id="overviewSection" aria-labelledby="totalSize">
+        <div class="overview-header">
+          <p class="total">
+            <span id="totalSize" class="total-size">0 B</span>
+            <span id="totalText" class="total-text">freigebbar</span>
+          </p>
+          <div id="selectionComparison" class="selection-comparison" hidden>
+            <span class="comp-badge comp-marked">
+              <span class="comp-dot" aria-hidden="true"></span>
+              <strong id="compMarkedText">0 B markiert</strong>
+            </span>
+            <span class="comp-badge comp-remaining">
+              <span id="compRemainingText">0 B verbleibend</span>
+            </span>
+          </div>
+        </div>
+        <div class="meter" id="meter" aria-hidden="true"></div>
+        <div class="legend" id="legend" role="group" aria-label="Nach Kategorie filtern"></div>
+      </section>
+
+      <!-- Dedicated Widescreen Action Card -->
+      <div class="widescreen-action-card" id="widescreenActionCard" hidden>
+        <div class="action-card-header">
+          <div>
+            <span class="action-card-badge">Bereinigung</span>
+            <h3 class="action-card-title" id="sideSelectedCount">0 Ordner markiert</h3>
+          </div>
+          <span class="action-card-size" id="sideSelectedSize">0 B</span>
+        </div>
+
+        <div class="action-card-body">
+          <label class="action-card-option">
+            <input type="checkbox" id="sideTrashCheckbox" checked>
+            <span>In den Papierkorb verschieben</span>
+          </label>
+          <div class="action-card-buttons">
+            <button type="button" id="sideDeleteBtn" class="btn btn-primary btn-block">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              Markierte entfernen
+            </button>
+            <button type="button" id="sideClearBtn" class="btn btn-quiet btn-block">Markierung aufheben</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tufte Insights Card for Widescreen -->
+      <div class="insights-card" id="insightsCard" hidden>
+        <h4 class="insights-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
           </svg>
-          <input type="search" id="searchInput" class="field field-search" placeholder="Projekte suchen …" spellcheck="false">
-        </div>
-
-        <div class="sort-wrap">
-          <label for="sortBySelect" class="sort-label">Sortieren:</label>
-          <select id="sortBySelect" class="field field-select">
-            <option value="size">Größe (Speicher)</option>
-            <option value="name">Name</option>
-            <option value="ecosystem">Art (Ökosystem &amp; Typ)</option>
-            <option value="files">Anzahl Dateien</option>
-          </select>
-          <button type="button" id="sortDirBtn" class="btn btn-icon-only" title="Sortierrichtung umschalten (Auf-/Absteigend)" aria-label="Sortierrichtung">
-            <svg class="icon-desc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M3 4h13M3 8h9M3 12h5m8-4v12m0 0l-4-4m4 4l4-4"></path>
-            </svg>
-            <svg class="icon-asc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
-              <path d="M3 4h5M3 8h9M3 12h13m4 8V8m0 0l-4 4m4-4l4 4"></path>
-            </svg>
-          </button>
-        </div>
+          Analyse &amp; Speicher-Einblicke
+        </h4>
+        <div class="insights-list" id="insightsList"></div>
       </div>
 
-      <div class="actions-group">
-        <div class="btn-group">
-          <button type="button" id="expandAllBtn" class="btn btn-secondary" title="Alle Projekt-Panels öffnen">Alle aufklappen</button>
-          <button type="button" id="collapseAllBtn" class="btn btn-secondary" title="Alle Projekt-Panels schließen">Alle zuklappen</button>
-        </div>
-        <div class="btn-group">
-          <button type="button" id="selectAllBtn" class="btn btn-quiet">Alle markieren</button>
-          <button type="button" id="deselectAllBtn" class="btn btn-quiet">Aufheben</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="emptyState" class="empty">
-      <h2 class="empty-title">Ordner wählen und scannen</h2>
-      <p class="empty-desc">Die App sucht in deinen Projekten nach <code>node_modules</code>, <code>.venv</code>, Build-Ausgaben und Caches und zeigt, wie viel Platz sie belegen. Gelöscht wird erst nach deiner Bestätigung.</p>
-    </div>
-
-    <div id="projectList" class="projects" aria-label="Gefundene Projekte"></div>
+    </aside>
 
   </main>
 
-  <!-- Sticky Bottom Tray -->
+  <!-- Sticky Bottom Tray (for standard/windowed screens) -->
   <aside id="bottomBar" class="tray" aria-label="Markierte Ordner">
     <p class="tray-summary">
       <span id="bottomSelectedSize" class="tray-size">0 B</span>

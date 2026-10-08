@@ -18,6 +18,7 @@ const state = {
   searchQuery: '',
   sortBy: 'size',            // 'size' | 'name' | 'ecosystem' | 'files'
   sortDir: 'desc',           // 'desc' | 'asc'
+  layout: 'auto',            // 'auto' | 'split-left' | 'split-right' | 'single'
   busy: false,
   busyType: 'idle',          // 'scan' | 'delete' | 'idle'
   stopStage: 0,              // 0: running, 1: stop after project, 2: hard stop
@@ -58,10 +59,25 @@ const reportCloseBtn = $('reportCloseBtn');
 
 const themeToggleBtn = $('themeToggleBtn');
 const fullscreenToggleBtn = $('fullscreenToggleBtn');
+const layoutToggleBtn = $('layoutToggleBtn');
 const sortBySelect = $('sortBySelect');
 const sortDirBtn = $('sortDirBtn');
 const expandAllBtn = $('expandAllBtn');
 const collapseAllBtn = $('collapseAllBtn');
+
+// Widescreen & Tufte Insights Elements
+const widescreenActionCard = $('widescreenActionCard');
+const sideSelectedCount = $('sideSelectedCount');
+const sideSelectedSize = $('sideSelectedSize');
+const sideTrashCheckbox = $('sideTrashCheckbox');
+const sideDeleteBtn = $('sideDeleteBtn');
+const sideClearBtn = $('sideClearBtn');
+
+const selectionComparison = $('selectionComparison');
+const compMarkedText = $('compMarkedText');
+const compRemainingText = $('compRemainingText');
+const insightsCard = $('insightsCard');
+const insightsList = $('insightsList');
 
 const api = () => window.pywebview?.api;
 
@@ -159,6 +175,54 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// ---------- Layout Management (Widescreen Dual-Pane & Single-Column) ----------
+
+const LAYOUT_MODES = ['auto', 'split-left', 'split-right', 'single'];
+const LAYOUT_LABELS = {
+  'auto': 'Automatisch (Split ab Widescreen)',
+  'split-left': 'Geteilt (Projekte links, Cockpit rechts)',
+  'split-right': 'Geteilt (Cockpit links, Projekte rechts)',
+  'single': 'Einspaltig zentriert',
+};
+
+function initLayout() {
+  const saved = localStorage.getItem('psh_layout') || 'auto';
+  state.layout = saved;
+  applyLayout(saved, false);
+}
+
+function applyLayout(mode, showFeedback = true) {
+  state.layout = mode;
+  localStorage.setItem('psh_layout', mode);
+
+  if (mode === 'auto') {
+    document.body.removeAttribute('data-layout');
+  } else {
+    document.body.setAttribute('data-layout', mode);
+  }
+
+  const label = LAYOUT_LABELS[mode] || mode;
+  if (layoutToggleBtn) {
+    layoutToggleBtn.title = `Layout umschalten (Aktuell: ${label})`;
+    layoutToggleBtn.setAttribute('aria-label', `Layout: ${label}`);
+  }
+
+  if (showFeedback) {
+    showToast(`Layout: ${label}`, 'info');
+  }
+}
+
+function toggleLayout() {
+  const currentIdx = LAYOUT_MODES.indexOf(state.layout);
+  const nextIdx = (currentIdx + 1) % LAYOUT_MODES.length;
+  const nextMode = LAYOUT_MODES[nextIdx];
+  applyLayout(nextMode, true);
+}
+
+if (layoutToggleBtn) {
+  layoutToggleBtn.addEventListener('click', toggleLayout);
+}
+
 // ---------- Busy & Stop States ----------
 
 function setBusy(busy, label, type = 'idle') {
@@ -178,6 +242,7 @@ function setBusy(busy, label, type = 'idle') {
   }
 
   $('bottomDeleteBtn').disabled = busy;
+  if (sideDeleteBtn) sideDeleteBtn.disabled = busy;
   scanBtn.disabled = busy && type !== 'scan';
 }
 
@@ -601,6 +666,37 @@ function updateAllCheckboxes() {
   });
 }
 
+function renderInsights() {
+  if (!insightsCard || !insightsList) return;
+  if (state.projects.length === 0) {
+    insightsCard.hidden = true;
+    insightsList.innerHTML = '';
+    return;
+  }
+
+  const totalDisposable = state.projects.reduce((s, p) => s + p.total_disposable_size, 0);
+  const totalFolders = allFolders().length;
+  const sortedByLoss = [...state.projects].sort((a, b) => b.total_disposable_size - a.total_disposable_size);
+  const topProject = sortedByLoss[0];
+  const topLossPct = totalDisposable > 0 ? ((topProject.total_disposable_size / totalDisposable) * 100).toFixed(0) : 0;
+
+  const catMap = {};
+  allFolders().forEach(f => {
+    catMap[f.category] = (catMap[f.category] || 0) + f.size_bytes;
+  });
+  const topCatKey = Object.keys(catMap).sort((a, b) => (catMap[b] || 0) - (catMap[a] || 0))[0];
+  const topCatLabel = CATEGORIES[topCatKey]?.label || topCatKey || 'Keine';
+  const topCatBytes = catMap[topCatKey] || 0;
+  const topCatPct = totalDisposable > 0 ? ((topCatBytes / totalDisposable) * 100).toFixed(0) : 0;
+
+  insightsList.innerHTML = `
+    <li><strong>Hauptspeicherfresser:</strong> <span class="insight-value">${escapeHtml(topProject.name)}</span> belegt <strong>${formatBytes(topProject.total_disposable_size)}</strong> (${topLossPct}&nbsp;% des gesamten bereinigbaren Speichers).</li>
+    <li><strong>Dominante Kategorie:</strong> <span class="insight-value">${escapeHtml(topCatLabel)}</span> bindet <strong>${formatBytes(topCatBytes)}</strong> (${topCatPct}&nbsp;%).</li>
+    <li><strong>Bereinigungspotenzial:</strong> <strong>${plural(totalFolders, 'Ordner', 'Ordner')}</strong> in <strong>${plural(state.projects.length, 'Projekt', 'Projekten')}</strong> erkannt.</li>
+  `;
+  insightsCard.hidden = false;
+}
+
 function updateStats() {
   const { count, bytes } = selectedTotals();
   renderOverview();
@@ -608,14 +704,40 @@ function updateStats() {
   $('bottomSelectedSize').textContent = formatBytes(bytes);
   $('bottomSelectedCount').textContent = `${plural(count, 'Ordner', 'Ordner')} markiert`;
   $('bottomDeleteBtn').disabled = state.busy;
+
+  // Widescreen Action Card
+  if (sideSelectedSize) sideSelectedSize.textContent = formatBytes(bytes);
+  if (sideSelectedCount) sideSelectedCount.textContent = `${plural(count, 'Ordner', 'Ordner')} markiert`;
+  if (widescreenActionCard) widescreenActionCard.hidden = (count === 0);
+  if (sideDeleteBtn) sideDeleteBtn.disabled = state.busy;
+
+  // Selection Comparison (Tufte Context Principle)
+  const totalDisposableBytes = state.projects.reduce((sum, p) => sum + p.total_disposable_size, 0);
+  if (selectionComparison) {
+    if (count > 0 && totalDisposableBytes > 0) {
+      selectionComparison.hidden = false;
+      const pct = ((bytes / totalDisposableBytes) * 100).toFixed(1);
+      const remainingBytes = Math.max(0, totalDisposableBytes - bytes);
+      compMarkedText.textContent = `${formatBytes(bytes)} (${pct} %)`;
+      compRemainingText.textContent = formatBytes(remainingBytes);
+    } else {
+      selectionComparison.hidden = true;
+    }
+  }
+
+  // Tufte Insights Card
+  renderInsights();
 }
 
 // ---------- Detailed Confirmation Modal with Deselection Safety ----------
 
 $('bottomDeleteBtn').addEventListener('click', showConfirmModal);
+if (sideDeleteBtn) sideDeleteBtn.addEventListener('click', showConfirmModal);
+if (sideClearBtn) sideClearBtn.addEventListener('click', clearSelection);
 
 function syncTrashOption() {
   const trash = modalTrashCheckbox.checked;
+  if (sideTrashCheckbox) sideTrashCheckbox.checked = trash;
   modalConfirmBtn.textContent = trash ? 'In Papierkorb verschieben' : 'Endgültig löschen';
   modalConfirmBtn.classList.toggle('btn-primary', trash);
   modalConfirmBtn.classList.toggle('btn-danger', !trash);
@@ -625,6 +747,13 @@ function syncTrashOption() {
 }
 
 modalTrashCheckbox.addEventListener('change', syncTrashOption);
+
+if (sideTrashCheckbox) {
+  sideTrashCheckbox.addEventListener('change', () => {
+    modalTrashCheckbox.checked = sideTrashCheckbox.checked;
+    syncTrashOption();
+  });
+}
 
 function updateModalSummary() {
   const folders = allFolders().filter(f => state.modalSelectedPaths.has(f.path));
@@ -680,7 +809,7 @@ function showConfirmModal() {
   });
 
   modalItemsList.innerHTML = html;
-  modalTrashCheckbox.checked = true;
+  modalTrashCheckbox.checked = sideTrashCheckbox ? sideTrashCheckbox.checked : true;
   syncTrashOption();
   updateModalSummary();
   confirmModal.showModal();
@@ -943,5 +1072,7 @@ reportCloseBtn.addEventListener('click', () => {
 
 // ---------- Initialization ----------
 
+initTheme();
+initLayout();
 buildOverview();
 updateStats();

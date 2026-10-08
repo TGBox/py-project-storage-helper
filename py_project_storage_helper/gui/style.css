@@ -1,6 +1,7 @@
 /* ==========================================================================
    Project Storage Helper - Design System & Styles
    Aesthetics: Engineered Industrial / Swiss Precision / Modern Obsidian
+   Responsive: Mobile, Standard Windowed & Adaptive Ultrawide/Widescreen
    ========================================================================== */
 
 :root {
@@ -102,7 +103,7 @@
   color-scheme: dark;
 }
 
-/* Automatic System Preference if data-theme="auto" */
+/* Automatic System Preference */
 @media (prefers-color-scheme: dark) {
   [data-theme="auto"] {
     --bg-app: #0B0F17;
@@ -169,7 +170,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .total-size, .tray-size, .kpi-value, .progress-counter {
+h1, h2, h3, h4, .total-size, .tray-size, .kpi-value, .progress-counter, .action-card-size {
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.015em;
@@ -204,8 +205,28 @@ button, input, select {
 }
 
 body:not(.has-results) .overview,
-body:not(.has-results) .list-tools {
-  display: none;
+body:not(.has-results) .list-tools,
+body:not(.has-results) .insights-card {
+  display: none !important;
+}
+
+/* Custom Scrollbar for Smooth Widescreen Feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* ==========================================================================
@@ -225,6 +246,7 @@ body:not(.has-results) .list-tools {
   position: sticky;
   top: 0;
   z-index: 20;
+  transition: max-width var(--transition-normal), padding var(--transition-normal);
 }
 
 .topbar-brand {
@@ -246,7 +268,7 @@ body:not(.has-results) .list-tools {
 .topbar-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .status {
@@ -280,7 +302,7 @@ body:not(.has-results) .list-tools {
 }
 
 /* ==========================================================================
-   Page Layout & Form Controls
+   Page Layout (Default Windowed / Single Column Mode)
    ========================================================================== */
 
 .page {
@@ -290,7 +312,30 @@ body:not(.has-results) .list-tools {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  transition: max-width var(--transition-normal), padding var(--transition-normal);
 }
+
+/* On standard screens, panes unpack their children so the vertical flow stays natural */
+.pane-cockpit, .pane-projects {
+  display: contents;
+}
+
+/* Natural order on standard screens */
+#scanForm { order: 1; }
+#progressContainer { order: 2; }
+#overviewSection { order: 3; }
+.list-tools { order: 4; }
+#emptyState { order: 5; }
+#projectList { order: 6; }
+
+/* Hidden in single-column mode */
+.widescreen-action-card, .insights-card {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Form Controls, Buttons & Inputs
+   ========================================================================== */
 
 .picker {
   display: flex;
@@ -325,7 +370,6 @@ body:not(.has-results) .list-tools {
   color: var(--text-subtle);
 }
 
-/* Button Variants */
 .btn {
   height: 38px;
   padding: 0 16px;
@@ -395,6 +439,10 @@ body:not(.has-results) .list-tools {
   background: var(--danger-hover);
 }
 
+.btn-block {
+  width: 100%;
+}
+
 /* 2-Stage Stop Button */
 .btn-stop {
   background: var(--bg-surface);
@@ -410,7 +458,6 @@ body:not(.has-results) .list-tools {
   background: var(--danger);
 }
 
-/* Stage 1: Soft stop pending */
 .btn-stop[data-stage="1"] {
   background: var(--warning-subtle);
   border-color: var(--warning);
@@ -422,7 +469,6 @@ body:not(.has-results) .list-tools {
   background: var(--warning);
 }
 
-/* Stage 2: Hard abort */
 .btn-stop[data-stage="2"] {
   background: var(--danger-subtle);
   border-color: var(--danger);
@@ -454,6 +500,12 @@ body:not(.has-results) .list-tools {
   border-color: var(--border-strong);
 }
 
+.icon-btn.active {
+  color: var(--accent-primary);
+  background: var(--bg-subtle);
+  border-color: var(--accent-primary);
+}
+
 .icon-btn.danger:hover {
   color: var(--danger);
   border-color: var(--danger);
@@ -469,7 +521,7 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
-   Dual Progress Bars Section
+   Dual Progress Bars
    ========================================================================== */
 
 .progress-card {
@@ -539,7 +591,7 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
-   Overview & Meter Bar
+   Storage Overview & Tufte Comparison
    ========================================================================== */
 
 .overview {
@@ -552,29 +604,75 @@ input[type="checkbox"] {
   box-shadow: var(--shadow-sm);
 }
 
+.overview-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .total {
   display: flex;
   align-items: baseline;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .total-size {
-  font-size: 42px;
+  font-size: 40px;
   font-weight: 700;
   line-height: 1;
 }
 
 .total-text {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--text-muted);
   font-weight: 500;
+}
+
+/* Tufte Selection Comparison Badges */
+.selection-comparison {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+
+.comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.comp-marked {
+  background: var(--signal-mark-subtle);
+  border-color: var(--signal-mark);
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.comp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--signal-mark);
+}
+
+.comp-remaining {
+  background: var(--bg-subtle);
+  border-color: var(--border-light);
+  color: var(--text-muted);
 }
 
 .meter {
   display: flex;
   gap: 3px;
-  height: 26px;
+  height: 24px;
   padding: 2px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-strong);
@@ -607,7 +705,7 @@ input[type="checkbox"] {
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 18px;
+  gap: 6px 16px;
 }
 
 .legend-item {
@@ -626,8 +724,8 @@ input[type="checkbox"] {
 
 .legend-item::before {
   content: "";
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   background: var(--cat);
   border-radius: 2px;
 }
@@ -682,7 +780,7 @@ input[type="checkbox"] {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 220px;
+  min-width: 200px;
   max-width: 320px;
   flex: 1;
 }
@@ -779,7 +877,7 @@ input[type="checkbox"] {
 
 .project-row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 140px 90px 32px 24px;
+  grid-template-columns: 24px minmax(0, 1fr) 130px 88px 32px 24px;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
@@ -881,7 +979,6 @@ input[type="checkbox"] {
   transform: rotate(180deg);
 }
 
-/* Subfolders inside project */
 .folders {
   list-style: none;
   border-top: 1px solid var(--border-light);
@@ -890,7 +987,7 @@ input[type="checkbox"] {
 
 .folder {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px 90px 32px 24px;
+  grid-template-columns: minmax(0, 1fr) 130px 88px 32px 24px;
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
@@ -962,35 +1059,286 @@ input[type="checkbox"] {
 .cat-cache { --cat: var(--cat-cache); }
 
 /* ==========================================================================
-   Empty State
+   Widescreen Specific Cards: Action Card & Insights Card
    ========================================================================== */
 
-.empty {
-  padding: 48px 24px;
-  text-align: center;
-  max-width: 580px;
-  margin: 40px auto;
+.widescreen-action-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-top: 3px solid var(--signal-mark);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.action-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.action-card-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.action-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.action-card-size {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: var(--font-display);
+}
+
+.action-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-card-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.action-card-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Insights Card */
+.insights-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
+  padding: 16px 20px;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.empty-title {
-  font-size: 22px;
+.insights-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
   font-weight: 700;
-  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
   color: var(--text-main);
 }
 
-.empty-desc {
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.6;
+.insight-item::before {
+  content: "›";
+  font-weight: 700;
+  color: var(--accent-primary);
+  line-height: 1.2;
 }
 
 /* ==========================================================================
-   Sticky Bottom Tray
+   WIDESCREEN 2-COLUMN SPLIT LAYOUT (Auto >= 1680px or explicit data-layout)
+   ========================================================================== */
+
+/* Active when screen width >= 1680px OR when explicitly chosen via layout switcher */
+@media (min-width: 1680px) {
+  body:not([data-layout="single"]) .topbar {
+    max-width: 100%;
+    padding: 16px 40px;
+  }
+
+  body:not([data-layout="single"]) .page {
+    max-width: 100%;
+    padding: 24px 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(420px, 0.75fr);
+    gap: 32px;
+    align-items: start;
+  }
+
+  body:not([data-layout="single"]) .pane-projects {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  body:not([data-layout="single"]) .pane-cockpit {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: sticky;
+    top: 76px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  /* Reset flex orders in grid */
+  body:not([data-layout="single"]) #scanForm,
+  body:not([data-layout="single"]) #progressContainer,
+  body:not([data-layout="single"]) #overviewSection,
+  body:not([data-layout="single"]) .list-tools,
+  body:not([data-layout="single"]) #emptyState,
+  body:not([data-layout="single"]) #projectList {
+    order: unset;
+  }
+
+  /* Sticky list tools at top of left panel */
+  body:not([data-layout="single"]) .list-tools {
+    position: sticky;
+    top: 76px;
+    z-index: 10;
+  }
+
+  /* Widescreen action card & insights become visible */
+  body:not([data-layout="single"]) .widescreen-action-card:not([hidden]) {
+    display: flex !important;
+  }
+
+  body:not([data-layout="single"]) .insights-card:not([hidden]) {
+    display: flex !important;
+  }
+
+  /* Bottom tray is hidden on widescreen when action card is active in the sidebar */
+  body:not([data-layout="single"]) .tray {
+    display: none !important;
+  }
+}
+
+/* Explicit Alternative: Cockpit Left / Projects Right */
+body[data-layout="split-right"] .topbar {
+  max-width: 100%;
+  padding: 16px 40px;
+}
+
+body[data-layout="split-right"] .page {
+  max-width: 100%;
+  padding: 24px 40px;
+  display: grid;
+  grid-template-columns: minmax(420px, 0.75fr) minmax(0, 1.25fr);
+  gap: 32px;
+  align-items: start;
+}
+
+body[data-layout="split-right"] .pane-cockpit {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+body[data-layout="split-right"] .pane-projects {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+body[data-layout="split-right"] .list-tools {
+  position: sticky;
+  top: 76px;
+  z-index: 10;
+}
+
+body[data-layout="split-right"] .widescreen-action-card:not([hidden]) {
+  display: flex !important;
+}
+
+body[data-layout="split-right"] .insights-card:not([hidden]) {
+  display: flex !important;
+}
+
+body[data-layout="split-right"] .tray {
+  display: none !important;
+}
+
+/* Explicit Layout: Split-Left even below 1680px if user forces it and width >= 1200px */
+@media (min-width: 1200px) {
+  body[data-layout="split-left"] .topbar {
+    max-width: 100%;
+    padding: 16px 32px;
+  }
+
+  body[data-layout="split-left"] .page {
+    max-width: 100%;
+    padding: 20px 32px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  body[data-layout="split-left"] .pane-projects {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  body[data-layout="split-left"] .pane-cockpit {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 76px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  body[data-layout="split-left"] .widescreen-action-card:not([hidden]) {
+    display: flex !important;
+  }
+
+  body[data-layout="split-left"] .insights-card:not([hidden]) {
+    display: flex !important;
+  }
+
+  body[data-layout="split-left"] .tray {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Sticky Bottom Tray (for standard/windowed single-column mode)
    ========================================================================== */
 
 .tray {
@@ -1046,7 +1394,7 @@ input[type="checkbox"] {
 }
 
 .dialog-wide {
-  width: 720px;
+  width: 740px;
 }
 
 .dialog::backdrop {
@@ -1330,7 +1678,7 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
-   Responsive Adaptations
+   Responsive Adaptations (< 820px)
    ========================================================================== */
 
 @media (max-width: 820px) {
