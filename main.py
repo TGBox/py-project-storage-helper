@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 
 import webview
 
@@ -11,10 +12,23 @@ from py_project_storage_helper.api import StorageHelperApi
 from py_project_storage_helper.scanner import find_projects_and_disposables, format_size
 
 
+def get_base_dir() -> Path:
+    """Get the base directory, supporting PyInstaller bundled executables."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent
+
+
 def run_gui() -> None:
     """Launch the PyWebView desktop application."""
     api = StorageHelperApi()
-    html_file = Path(__file__).resolve().parent / "py_project_storage_helper" / "gui" / "index.html"
+    base_dir = get_base_dir()
+    html_file = base_dir / "py_project_storage_helper" / "gui" / "index.html"
+    if not html_file.exists():
+        alt_html = base_dir / "gui" / "index.html"
+        if alt_html.exists():
+            html_file = alt_html
+
     window = webview.create_window(
         title="Project Storage Helper",
         url=str(html_file),

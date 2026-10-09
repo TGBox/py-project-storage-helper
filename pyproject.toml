@@ -1,6 +1,6 @@
 [project]
 name = "py-project-storage-helper"
-version = "2.3.0"
+version = "2.3.1"
 description = "A python app to manage your code project folders and safe valuable disk space."
 readme = "README.md"
 requires-python = ">=3.14"
@@ -13,4 +13,7 @@ dependencies = [
 
 [project.scripts]
 py-project-storage-helper = "main:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
